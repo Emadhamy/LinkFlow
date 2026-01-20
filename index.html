@@ -10,9 +10,9 @@
     <meta name="description" content="ابعت.. سجل.. من غير ما تسيف - مدير اتصالات واتساب الذكي">
     <meta name="mobile-web-app-capable" content="yes">
     <title>لينك فلو | LinkFlow</title>
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon.svg">
-    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
@@ -466,8 +466,8 @@
 
     <!-- Settings Panel -->
     <div id="settings-overlay" class="hidden fixed inset-0 bg-black/70 z-50 settings-overlay" onclick="closeSettings()"></div>
-    <div id="settings-panel" class="fixed bottom-0 left-0 right-0 z-50 translate-y-full transition-transform duration-300">
-        <div class="max-w-md mx-auto glass-strong rounded-t-3xl p-6" onclick="event.stopPropagation()">
+    <div id="settings-panel" class="hidden fixed inset-0 z-50 flex items-end justify-center" style="background: rgba(0,0,0,0.7);" onclick="closeSettings()">
+        <div class="w-full max-w-md glass-strong rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()" style="background: linear-gradient(135deg, rgba(20,20,35,0.98), rgba(30,30,50,0.98)); border: 1px solid rgba(0,255,136,0.2);">
             <!-- Settings Header -->
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold" data-i18n="settings">⚙️ الإعدادات</h2>
@@ -865,13 +865,11 @@
         // Settings
         // ==========================================
         function openSettings() {
-            document.getElementById('settings-overlay').classList.remove('hidden');
-            document.getElementById('settings-panel').style.transform = 'translateY(0)';
+            document.getElementById('settings-panel').classList.remove('hidden');
         }
 
         function closeSettings() {
-            document.getElementById('settings-overlay').classList.add('hidden');
-            document.getElementById('settings-panel').style.transform = 'translateY(100%)';
+            document.getElementById('settings-panel').classList.add('hidden');
         }
 
         function toggleSetting(key) {
@@ -1271,7 +1269,7 @@
         // ==========================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('sw.js')
                     .then(reg => console.log('SW registered'))
                     .catch(err => console.log('SW failed'));
             });
