@@ -64,13 +64,30 @@ jobs:
       - name: 📍 Find APK files
         id: find_apk
         run: |
+          echo "🔍 Searching for APK files..."
+          find /tmp/build-work/cordova-build -name "*.apk" -type f
+          
           DEBUG_APK=$(find /tmp/build-work/cordova-build -name "*debug.apk" -type f | head -1)
           RELEASE_APK=$(find /tmp/build-work/cordova-build -name "*release*.apk" -type f | head -1)
+          
+          if [ -z "$DEBUG_APK" ]; then
+            echo "❌ Debug APK not found"
+            DEBUG_APK="/tmp/build-work/cordova-build/platforms/android/build/outputs/apk/debug/app-debug.apk"
+          fi
+          
+          if [ -z "$RELEASE_APK" ]; then
+            echo "❌ Release APK not found"
+            RELEASE_APK="/tmp/build-work/cordova-build/platforms/android/build/outputs/apk/release/app-release-unsigned.apk"
+          fi
+          
           echo "debug_apk=$DEBUG_APK" >> $GITHUB_OUTPUT
           echo "release_apk=$RELEASE_APK" >> $GITHUB_OUTPUT
-          ls -lh $DEBUG_APK $RELEASE_APK
+          
+          echo "✅ Debug APK: $DEBUG_APK"
+          echo "✅ Release APK: $RELEASE_APK"
       
       - name: ⬆️ Upload Debug APK
+        if: hashFiles('${{ steps.find_apk.outputs.debug_apk }}') != ''
         uses: actions/upload-artifact@v4
         with:
           name: LinkFlow-Debug
@@ -78,6 +95,7 @@ jobs:
           retention-days: 30
       
       - name: ⬆️ Upload Release APK
+        if: hashFiles('${{ steps.find_apk.outputs.release_apk }}') != ''
         uses: actions/upload-artifact@v4
         with:
           name: LinkFlow-Release

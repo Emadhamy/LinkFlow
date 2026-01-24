@@ -69,14 +69,36 @@ jobs:
       - name: 📍 Locate APK
         id: locate
         run: |
+          echo "🔍 Searching for APK files..."
+          find /tmp/build-work/linkflow-app -name "*.apk" -type f
+          
           BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
           APK=$(find /tmp/build-work/linkflow-app -name "*${BUILD_TYPE}*.apk" -type f | head -1)
-          APK_SIZE=$(du -h "$APK" | cut -f1)
+          
+          if [ -z "$APK" ]; then
+            echo "❌ APK not found, trying default paths..."
+            if [ "$BUILD_TYPE" = "release" ]; then
+              APK="/tmp/build-work/linkflow-app/platforms/android/build/outputs/apk/release/app-release-unsigned.apk"
+            else
+              APK="/tmp/build-work/linkflow-app/platforms/android/build/outputs/apk/debug/app-debug.apk"
+            fi
+          fi
+          
+          if [ -f "$APK" ]; then
+            APK_SIZE=$(du -h "$APK" | cut -f1)
+          else
+            APK_SIZE="unknown"
+          fi
+          
           echo "apk_path=$APK" >> $GITHUB_OUTPUT
           echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
           echo "BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_OUTPUT
+          
+          echo "✅ APK: $APK"
+          echo "✅ Size: $APK_SIZE"
       
       - name: ⬆️ Upload Artifact
+        if: hashFiles('${{ steps.locate.outputs.apk_path }}') != ''
         uses: actions/upload-artifact@v4
         with:
           name: LinkFlow-${{ steps.locate.outputs.BUILD_TYPE }}-APK
