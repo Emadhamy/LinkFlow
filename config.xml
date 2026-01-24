@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="com.linkflow.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>LinkFlow</name>
-    <description>لينك فلو - مدير اتصالات واتساب الذكي | Smart WhatsApp Contact Manager</description>
-    <author email="contact@linkflow.com" href="https://linkflow.com">LinkFlow Team</author>
+    <description>لينك فلو - مدير اتصالات واتساب الذكي</description>
+    <author email="contact@linkflow.app" href="https://linkflow.app">LinkFlow Team</author>
     
     <content src="index.html" />
     

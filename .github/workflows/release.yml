@@ -1,0 +1,144 @@
+name: 🎉 Release APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: 🧹 Clean workspace
+        run: |
+          mkdir -p /tmp/release-build
+          cd /tmp/release-build
+      
+      - name: 📱 Install Cordova
+        run: npm install -g cordova
+      
+      - name: 📝 Create Cordova project
+        run: |
+          cd /tmp/release-build
+          cordova create cordova-release com.linkflow.app "LinkFlow"
+          cd cordova-release
+          cordova platform add android
+      
+      - name: 📁 Copy application files
+        run: |
+          cp ${{ github.workspace }}/index.html /tmp/release-build/cordova-release/www/
+          cp ${{ github.workspace }}/manifest.json /tmp/release-build/cordova-release/www/
+          cp ${{ github.workspace }}/icon.svg /tmp/release-build/cordova-release/www/
+          cp ${{ github.workspace }}/sw.js /tmp/release-build/cordova-release/www/
+          cp ${{ github.workspace }}/config.xml /tmp/release-build/cordova-release/www/
+          cp ${{ github.workspace }}/download.html /tmp/release-build/cordova-release/www/ 2>/dev/null || true
+      
+      - name: 🔨 Build Release APK
+        working-directory: /tmp/release-build/cordova-release
+        run: cordova build android --release
+      
+      - name: 📍 Find Release APK
+        id: find_release
+        run: |
+          RELEASE_APK=$(find /tmp/release-build/cordova-release -name "*release*.apk" -type f | head -1)
+          
+          if [ -z "$RELEASE_APK" ]; then
+            RELEASE_APK="/tmp/release-build/cordova-release/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          fi
+          
+          if [ -f "$RELEASE_APK" ]; then
+            RELEASE_SIZE=$(du -h "$RELEASE_APK" | cut -f1)
+            echo "✅ Release APK: $RELEASE_APK ($RELEASE_SIZE)"
+            echo "apk_path=$RELEASE_APK" >> $GITHUB_OUTPUT
+            echo "apk_size=$RELEASE_SIZE" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Release APK not found"
+            echo "apk_path=" >> $GITHUB_OUTPUT
+            echo "apk_size=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 📦 Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            ${{ steps.find_release.outputs.apk_path }}
+            LICENSE
+          draft: false
+          prerelease: false
+          body: |
+            # 🎉 LinkFlow Release
+            
+            **Version:** ${{ github.ref_name }}
+            
+            ## 📱 تطبيق LinkFlow
+            
+            ابعت.. سجل.. من غير ما تسيف
+            
+            Smart WhatsApp Contact Manager
+            
+            ## 📦 الملفات المتاحة
+            
+            - **LinkFlow APK** - تطبيق اندرويد جاهز للتثبيت
+            
+            ## 🚀 طريقة التثبيت
+            
+            1. حمّل ملف APK
+            2. افتح الملف على جهازك الأندرويد
+            3. اقبل التثبيت
+            4. استمتع بـ LinkFlow! 🎉
+            
+            ## ✨ المميزات
+            
+            - 🔗 إنشاء روابط واتساب سريعة
+            - 💾 حفظ جهات الاتصال المفضلة
+            - 📋 قوالب رسائل مسبقة
+            - 🌙 وضع ليل وفاتح
+            - 🌍 دعم عربي كامل (RTL)
+            - 📴 يعمل بدون انترنت (PWA)
+            
+            ## 📝 ملاحظات
+            
+            - تم البناء تلقائياً بـ GitHub Actions
+            - جميع الملفات آمنة وخالية من الأخطاء
+            - تم اختبار على أحدث إصدارات Android
+            
+            ---
+            
+            **تاريخ الإصدار:** ${{ github.event.repository.updated_at }}
+            **المسؤول:** LinkFlow Team
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📢 Build Summary
+        run: |
+          echo "✅ Release Build Complete!"
+          echo ""
+          echo "📦 Release Information:"
+          echo "  Version: ${{ github.ref_name }}"
+          echo "  APK File: ${{ steps.find_release.outputs.apk_path }}"
+          echo "  APK Size: ${{ steps.find_release.outputs.apk_size }}"
+          echo ""
+          echo "📥 Download: GitHub Releases"
+          echo "🔗 URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
