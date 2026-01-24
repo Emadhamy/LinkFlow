@@ -18,7 +18,7 @@
 ```bash
 # تأكد من أن المشروع مرفوع على GitHub
 git add .
-git commit -m "🚀 Add GitHub Actions for APK building"
+git commit -m "⚙️ GitHub Actions setup"
 git push origin main
 ```
 
