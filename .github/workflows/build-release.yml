@@ -38,34 +38,39 @@ jobs:
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v2
       
-      - name: 🧹 Clean up node_modules
+      - name: 🧹 Clean workspace
         run: |
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
+          mkdir -p /tmp/build-work
+          cd /tmp/build-work
       
       - name: 📱 Install Cordova
         run: npm install -g cordova
       
       - name: 📝 Create project
         run: |
+          cd /tmp/build-work
           cordova create linkflow-app com.linkflow.app "LinkFlow"
           cd linkflow-app
           cordova platform add android
       
       - name: 📁 Copy application files
         run: |
-          cp index.html manifest.json icon.svg sw.js config.xml linkflow-app/www/
-          cp download.html linkflow-app/www/ 2>/dev/null || true
+          cp ${{ github.workspace }}/index.html /tmp/build-work/linkflow-app/www/
+          cp ${{ github.workspace }}/manifest.json /tmp/build-work/linkflow-app/www/
+          cp ${{ github.workspace }}/icon.svg /tmp/build-work/linkflow-app/www/
+          cp ${{ github.workspace }}/sw.js /tmp/build-work/linkflow-app/www/
+          cp ${{ github.workspace }}/config.xml /tmp/build-work/linkflow-app/www/
+          cp ${{ github.workspace }}/download.html /tmp/build-work/linkflow-app/www/ 2>/dev/null || true
       
       - name: 🔨 Build APK
-        working-directory: linkflow-app
+        working-directory: /tmp/build-work/linkflow-app
         run: cordova build android --${{ github.event.inputs.build_type || 'release' }}
       
       - name: 📍 Locate APK
         id: locate
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
-          APK=$(find linkflow-app -name "*${BUILD_TYPE}*.apk" -type f | head -1)
+          APK=$(find /tmp/build-work/linkflow-app -name "*${BUILD_TYPE}*.apk" -type f | head -1)
           APK_SIZE=$(du -h "$APK" | cut -f1)
           echo "apk_path=$APK" >> $GITHUB_OUTPUT
           echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
