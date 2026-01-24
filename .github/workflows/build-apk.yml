@@ -1,0 +1,99 @@
+name: 🚀 Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+      
+      - name: 🔧 Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v2
+      
+      - name: 📱 Install Cordova
+        run: npm install -g cordova
+      
+      - name: 📝 Create Cordova project
+        run: |
+          cordova create cordova-build com.linkflow.app "LinkFlow"
+          cd cordova-build
+          cordova platform add android
+      
+      - name: 📁 Copy files
+        run: |
+          cp index.html manifest.json icon.svg sw.js config.xml cordova-build/www/
+      
+      - name: 🔨 Build APK (Debug)
+        working-directory: cordova-build
+        run: cordova build android --debug
+      
+      - name: 🎯 Build APK (Release)
+        working-directory: cordova-build
+        run: cordova build android --release
+      
+      - name: 📍 Find APK files
+        id: find_apk
+        run: |
+          DEBUG_APK=$(find cordova-build -name "*debug.apk" -type f | head -1)
+          RELEASE_APK=$(find cordova-build -name "*release*.apk" -type f | head -1)
+          echo "debug_apk=$DEBUG_APK" >> $GITHUB_OUTPUT
+          echo "release_apk=$RELEASE_APK" >> $GITHUB_OUTPUT
+          ls -lh $DEBUG_APK $RELEASE_APK
+      
+      - name: ⬆️ Upload Debug APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: LinkFlow-Debug
+          path: ${{ steps.find_apk.outputs.debug_apk }}
+          retention-days: 30
+      
+      - name: ⬆️ Upload Release APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: LinkFlow-Release
+          path: ${{ steps.find_apk.outputs.release_apk }}
+          retention-days: 30
+      
+      - name: 📊 Build Summary
+        run: |
+          echo "✅ Build Complete!"
+          echo ""
+          echo "📦 Artifacts:"
+          echo "  Debug APK: ${{ steps.find_apk.outputs.debug_apk }}"
+          echo "  Release APK: ${{ steps.find_apk.outputs.release_apk }}"
+          echo ""
+          echo "📥 Download from: Actions → Artifacts"
+
+  notify:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📧 Notify
+        run: |
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "✅ APK build successful!"
+          else
+            echo "❌ APK build failed!"
+          fi

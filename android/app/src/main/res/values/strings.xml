@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">linkflow</string>
+    <string name="title_activity_main">linkflow</string>
+    <string name="package_name">com.linkflow.app</string>
+    <string name="custom_url_scheme">com.linkflow.app</string>
+</resources>

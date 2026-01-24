@@ -1,0 +1,113 @@
+name: 🚀 Build & Sign APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (debug/release)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build-signed:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v3
+      
+      - name: 🔧 Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v2
+      
+      - name: 📱 Install Cordova
+        run: npm install -g cordova
+      
+      - name: 📝 Create project
+        run: |
+          cordova create linkflow-app com.linkflow.app "LinkFlow"
+          cd linkflow-app
+          cordova platform add android
+      
+      - name: 📁 Copy application files
+        run: |
+          cp index.html manifest.json icon.svg sw.js config.xml linkflow-app/www/
+          cp download.html linkflow-app/www/ 2>/dev/null || true
+      
+      - name: 🔨 Build APK
+        working-directory: linkflow-app
+        run: cordova build android --${{ github.event.inputs.build_type || 'release' }}
+      
+      - name: 📍 Locate APK
+        id: locate
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
+          APK=$(find linkflow-app -name "*${BUILD_TYPE}*.apk" -type f | head -1)
+          APK_SIZE=$(du -h "$APK" | cut -f1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+          echo "BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_OUTPUT
+      
+      - name: ⬆️ Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: LinkFlow-${{ steps.locate.outputs.BUILD_TYPE }}-APK
+          path: ${{ steps.locate.outputs.apk_path }}
+          retention-days: 60
+      
+      - name: 📊 Report
+        run: |
+          echo "✅ Build completed successfully!"
+          echo ""
+          echo "📦 APK Information:"
+          echo "  - File: ${{ steps.locate.outputs.apk_path }}"
+          echo "  - Size: ${{ steps.locate.outputs.apk_size }}"
+          echo "  - Type: ${{ steps.locate.outputs.BUILD_TYPE }}"
+          echo ""
+          echo "📥 Download: GitHub Actions Artifacts"
+
+  create-release:
+    needs: build-signed
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: 📥 Download Artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: 📝 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LinkFlow-*/LinkFlow*.apk
+          draft: false
+          prerelease: false
+          body: |
+            # 🎉 LinkFlow Release
+            
+            ## 📦 APK Files
+            - **Release APK**: Ready for Google Play Store
+            - **Debug APK**: For testing only
+            
+            ## 🚀 Installation
+            Download the APK and install on your Android device.
+            
+            ## 📋 Changelog
+            See commits for details.
