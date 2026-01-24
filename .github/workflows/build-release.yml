@@ -69,41 +69,51 @@ jobs:
       - name: 📍 Locate APK
         id: locate
         run: |
-          echo "🔍 Searching for APK files..."
-          find /tmp/build-work/linkflow-app -name "*.apk" -type f
+          echo "🔍 Build directory contents:"
+          ls -la /tmp/build-work/linkflow-app/
           
           BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
-          APK=$(find /tmp/build-work/linkflow-app -name "*${BUILD_TYPE}*.apk" -type f | head -1)
+          
+          echo "🔍 Searching for APK files in all locations..."
+          find /tmp/build-work/linkflow-app -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          
+          echo "🔍 Checking Gradle build outputs..."
+          find /tmp/build-work/linkflow-app/platforms/android/app/build/outputs -type d 2>/dev/null || echo "Gradle output dir not found"
+          
+          APK=$(find /tmp/build-work/linkflow-app -name "*${BUILD_TYPE}*.apk" -type f 2>/dev/null | head -1)
           
           if [ -z "$APK" ]; then
-            echo "❌ APK not found, trying default paths..."
+            echo "⚠️  APK not found, using default path..."
             if [ "$BUILD_TYPE" = "release" ]; then
-              APK="/tmp/build-work/linkflow-app/platforms/android/build/outputs/apk/release/app-release-unsigned.apk"
+              APK="/tmp/build-work/linkflow-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
             else
-              APK="/tmp/build-work/linkflow-app/platforms/android/build/outputs/apk/debug/app-debug.apk"
+              APK="/tmp/build-work/linkflow-app/platforms/android/app/build/outputs/apk/debug/app-debug.apk"
             fi
+          else
+            echo "✅ Found APK: $APK"
           fi
           
           if [ -f "$APK" ]; then
             APK_SIZE=$(du -h "$APK" | cut -f1)
+            echo "✅ APK exists with size: $APK_SIZE"
           else
             APK_SIZE="unknown"
+            echo "⚠️  APK file not ready yet"
           fi
           
-          echo "apk_path=$APK" >> $GITHUB_OUTPUT
-          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
-          echo "BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_OUTPUT
-          
-          echo "✅ APK: $APK"
-          echo "✅ Size: $APK_SIZE"
+          echo "apk_path=${APK}" >> $GITHUB_OUTPUT
+          echo "apk_size=${APK_SIZE}" >> $GITHUB_OUTPUT
+          echo "BUILD_TYPE=${BUILD_TYPE}" >> $GITHUB_OUTPUT
       
       - name: ⬆️ Upload Artifact
-        if: hashFiles('${{ steps.locate.outputs.apk_path }}') != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: LinkFlow-${{ steps.locate.outputs.BUILD_TYPE }}-APK
           path: ${{ steps.locate.outputs.apk_path }}
           retention-days: 60
+          if-no-files-found: ignore
       
       - name: 📊 Report
         run: |

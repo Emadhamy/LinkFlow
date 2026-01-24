@@ -64,43 +64,60 @@ jobs:
       - name: 📍 Find APK files
         id: find_apk
         run: |
-          echo "🔍 Searching for APK files..."
-          find /tmp/build-work/cordova-build -name "*.apk" -type f
+          echo "🔍 Build directory contents:"
+          ls -la /tmp/build-work/cordova-build/
           
-          DEBUG_APK=$(find /tmp/build-work/cordova-build -name "*debug.apk" -type f | head -1)
-          RELEASE_APK=$(find /tmp/build-work/cordova-build -name "*release*.apk" -type f | head -1)
+          echo "🔍 Searching for APK files in all locations..."
+          find /tmp/build-work/cordova-build -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
           
+          # Check specific Gradle output paths
+          echo "🔍 Checking Gradle build outputs..."
+          find /tmp/build-work/cordova-build/platforms/android/app/build/outputs -type d 2>/dev/null || echo "Gradle output dir not found"
+          
+          DEBUG_APK=$(find /tmp/build-work/cordova-build -name "*debug.apk" -type f 2>/dev/null | head -1)
+          RELEASE_APK=$(find /tmp/build-work/cordova-build -name "*release*.apk" -type f 2>/dev/null | head -1)
+          
+          # Set defaults with explicit paths
           if [ -z "$DEBUG_APK" ]; then
-            echo "❌ Debug APK not found"
-            DEBUG_APK="/tmp/build-work/cordova-build/platforms/android/build/outputs/apk/debug/app-debug.apk"
+            DEBUG_APK="/tmp/build-work/cordova-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk"
+            echo "⚠️  Using default Debug APK path"
+          else
+            echo "✅ Found Debug APK: $DEBUG_APK"
           fi
           
           if [ -z "$RELEASE_APK" ]; then
-            echo "❌ Release APK not found"
-            RELEASE_APK="/tmp/build-work/cordova-build/platforms/android/build/outputs/apk/release/app-release-unsigned.apk"
+            RELEASE_APK="/tmp/build-work/cordova-build/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+            echo "⚠️  Using default Release APK path"
+          else
+            echo "✅ Found Release APK: $RELEASE_APK"
           fi
           
-          echo "debug_apk=$DEBUG_APK" >> $GITHUB_OUTPUT
-          echo "release_apk=$RELEASE_APK" >> $GITHUB_OUTPUT
+          echo "debug_apk=${DEBUG_APK}" >> $GITHUB_OUTPUT
+          echo "release_apk=${RELEASE_APK}" >> $GITHUB_OUTPUT
           
-          echo "✅ Debug APK: $DEBUG_APK"
-          echo "✅ Release APK: $RELEASE_APK"
+          # Verify files exist
+          [ -f "$DEBUG_APK" ] && echo "✅ Debug APK exists" || echo "⚠️  Debug APK not ready yet"
+          [ -f "$RELEASE_APK" ] && echo "✅ Release APK exists" || echo "⚠️  Release APK not ready yet"
       
       - name: ⬆️ Upload Debug APK
-        if: hashFiles('${{ steps.find_apk.outputs.debug_apk }}') != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: LinkFlow-Debug
           path: ${{ steps.find_apk.outputs.debug_apk }}
           retention-days: 30
+          if-no-files-found: ignore
       
       - name: ⬆️ Upload Release APK
-        if: hashFiles('${{ steps.find_apk.outputs.release_apk }}') != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: LinkFlow-Release
           path: ${{ steps.find_apk.outputs.release_apk }}
           retention-days: 30
+          if-no-files-found: ignore
       
       - name: 📊 Build Summary
         run: |
