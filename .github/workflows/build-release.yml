@@ -67,7 +67,7 @@ jobs:
           echo "BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_OUTPUT
       
       - name: ⬆️ Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: LinkFlow-${{ steps.locate.outputs.BUILD_TYPE }}-APK
           path: ${{ steps.locate.outputs.apk_path }}
@@ -91,7 +91,7 @@ jobs:
     
     steps:
       - name: 📥 Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       
       - name: 📝 Create Release
         uses: softprops/action-gh-release@v1
